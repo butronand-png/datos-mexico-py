@@ -1,0 +1,15 @@
+metrica,canal,efecto_pp,ic95_semiancho,pct_del_total,semilla_20260701,semilla_20260702,semilla_20260703,semilla_20260704,semilla_20260705
+pct_sin_pension,nivel_baseline_mujeres,93.32,0.08,,93.31,93.42,93.34,93.24,93.3
+pct_sin_pension,nivel_baseline_hombres,76.15,0.32,,75.82,75.97,76.44,76.18,76.33
+pct_sin_pension,densidad_transiciones,-17.02,0.26,99.1,-16.81,-17.29,-17.04,-17.13,-16.81
+pct_sin_pension,salario,0.0,0.0,-0.0,0.0,0.0,0.0,0.0,0.0
+pct_sin_pension,longevidad,0.15,0.07,-0.9,0.11,0.21,0.14,0.21,0.09
+pct_sin_pension,residual_interaccion,-0.31,0.37,1.8,-0.79,-0.36,0.01,-0.15,-0.24
+pct_sin_pension,brecha_total,-17.17,0.34,100.0,-17.49,-17.44,-16.9,-17.06,-16.96
+masa_cero_def_a,nivel_baseline_mujeres,92.25,0.09,,92.23,92.37,92.26,92.19,92.22
+masa_cero_def_a,nivel_baseline_hombres,75.5,0.32,,75.17,75.33,75.8,75.5,75.7
+masa_cero_def_a,densidad_transiciones,-16.59,0.29,99.0,-16.36,-16.91,-16.61,-16.71,-16.39
+masa_cero_def_a,salario,0.0,0.0,-0.0,0.0,0.0,0.0,0.0,0.0
+masa_cero_def_a,longevidad,0.14,0.09,-0.9,0.09,0.22,0.12,0.22,0.07
+masa_cero_def_a,residual_interaccion,-0.3,0.37,1.8,-0.79,-0.35,0.02,-0.2,-0.21
+masa_cero_def_a,brecha_total,-16.75,0.35,100.0,-17.06,-17.04,-16.47,-16.69,-16.52

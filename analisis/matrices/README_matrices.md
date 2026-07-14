@@ -9,9 +9,11 @@ Un único par de trimestres emparejados: **2024T3 → 2024T4**. Esto implica:
 (i) la **estacionalidad Q3→Q4 no está controlada** (fin de año concentra
 contrataciones formales de temporada y salidas escolares hacia la PEA);
 (ii) **n delgado** en las filas de origen `desempleado` y `fuera_PEA` de
-varios perfiles. La matriz FINAL del paper requiere **apilar múltiples
-pares trimestrales consecutivos (Fase 2.5, pendiente)**; esta v1 sirve para
-validar el pipeline y la forma de la heterogeneidad.
+varios perfiles. La matriz FINAL del paper apila múltiples pares de
+entrevistas — **Fase 2.5, TERMINADA: ver `README_matrices_anuales.md` y
+`estimador_matrices_anuales.py` (matrices anuales 5x5, panel ENOE
+2015-2024, integradas al motor)**; esta v1 sirvió para validar el
+pipeline y la forma de la heterogeneidad.
 
 ## Mapeo variable → estado (contrato §4)
 
