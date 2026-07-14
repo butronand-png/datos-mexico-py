@@ -107,6 +107,7 @@ def simular(
     r_historico: dict[int, float] | None = None,
     indice_salarial: dict[int, float] | None = None,
     matriz_heterogenea: bool = False,
+    tensor_transicion: np.ndarray | None = None,
 ) -> ResultadoSimulacion:
     """Corre el motor end-to-end: backcast 1997-2025 + proyección 2026-2070.
 
@@ -135,6 +136,9 @@ def simular(
             estados, False) queda intacta bit a bit. Limitación vigente:
             el delta de escenario (delta_densidad_pp) NO aplica a la ruta
             heterogénea (pendiente de paso dedicado).
+        tensor_transicion: tensor (8, 2, 3, E, E) que sustituye al estimado
+            de ENOE en la ruta heterogénea (contrafactuales Sección 7).
+            Ignorado con matriz_heterogenea=False. None == sin sustitución.
     """
     if r_historico is None:
         r_historico = {}
@@ -202,7 +206,13 @@ def simular(
         # Tensor 5x5 ANUAL (sin P^4). ⚠️ SUPUESTO backcast (decisión c):
         # el promedio 2015-2024 aplica en todo el horizonte, también
         # hacia atrás — continuidad individual sobre fidelidad de época.
-        tensor_P = construye_tensor(cargar_matrices_anuales())
+        # tensor_transicion permite inyectar un tensor alternativo con la
+        # misma forma (8, 2, 3, E, E) — contrafactuales de la Sección 7
+        # (p. ej. swap de canal por sexo). None == tensor estimado ENOE.
+        if tensor_transicion is not None:
+            tensor_P = tensor_transicion
+        else:
+            tensor_P = construye_tensor(cargar_matrices_anuales())
         etiquetas_estado = np.array(ESTADOS_ANUALES, dtype=object)
         n_est_het = len(ESTADOS_ANUALES)
         idx_f_imss = ESTADO_A_IDX_ANUALES["formal_IMSS"]
