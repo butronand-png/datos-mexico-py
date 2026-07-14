@@ -37,6 +37,8 @@ agregados CONSAR 2025 vía `client.consar` y escribe todo en `outputs/`.
 - `agentes.csv`: un registro por agente-simulación (`agente_id, escenario,
   cohorte_retiro, genero, densidad_cotizacion, saldo_final, pension_mensual,
   tasa_reemplazo, requiere_PG, requiere_FPB, complemento_FPB_anual,
-  edad_retiro, semilla`).
+  edad_retiro, sector_issste, semanas_cotizadas, estado_final,
+  anios_formal, vivo_final, semilla`; con `matriz_heterogenea=True` se
+  agrega `escolaridad`).
 - `agregados_anuales.csv`: por año-escenario (`n_jubilados, n_bajo_piso,
   costo_FPB_total_mm, costo_FPB_p10/p90_mm, costo_como_pct_PIB`).
