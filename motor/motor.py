@@ -264,6 +264,7 @@ def simular(
     anios_formal = np.zeros(n)
     anios_activo = np.zeros(n)  # años desde la entrada (denominador densidad)
     suma_sal_formal = np.zeros(n)
+    ultimo_sal_formal = np.zeros(n)  # F2: piso legal = último salario (§5.1)
     vivo = np.ones(n, dtype=bool)
     retirado = np.zeros(n, dtype=bool)
     pension = np.zeros(n)
@@ -317,6 +318,13 @@ def simular(
         deflactor_inpc = cargar_deflactor_inpc()
     elif regla_tope != "legada":
         raise ValueError(f"fpb.regla_tope desconocida: {regla_tope!r}")
+    # F2 (§5.1): definición del piso del complemento. "promedio_carrera" es
+    # la regla original (default, no-regresión §8.1); "ultimo_anio" es la
+    # legal [V, F2/F8 y Nota 1 de los EF 2T-2025: piso = último salario,
+    # topado] — [I] con perfiles crecientes, promedio_carrera SUBESTIMA.
+    definicion_piso = cfg["fpb"].get("definicion_piso", "promedio_carrera")
+    if definicion_piso not in ("promedio_carrera", "ultimo_anio"):
+        raise ValueError(f"fpb.definicion_piso desconocida: {definicion_piso!r}")
 
     # F1: decisión de diferimiento 60 vs 65 (SPEC fondo FPB §4). Default
     # OFF — con el flag apagado el flujo (y el stream del rng) es idéntico
@@ -361,10 +369,17 @@ def simular(
                 # Estado al agotarse el saldo — aquí piso directo.
                 p = pg_mensual
                 requiere_pg[j] = True
-            piso = min(sal_prom, tope_fpb_j) if not np.isnan(sal_prom) else 0.0
+            if definicion_piso == "ultimo_anio":
+                # regla legal (§5.1): piso = último salario formal, topado
+                piso = (
+                    min(ultimo_sal_formal[j], tope_fpb_j)
+                    if ultimo_sal_formal[j] > 0
+                    else 0.0
+                )
+            else:
+                piso = min(sal_prom, tope_fpb_j) if not np.isnan(sal_prom) else 0.0
             # ⚠️ PROVISIONAL: elegibilidad FPB = cumplir semanas y
-            # edad 65 (ley 97); piso = salario promedio de cotización
-            # con tope — confirmar reglas exactas con Fabiola/Yáñez.
+            # edad 65 (ley 97) — confirmar reglas exactas con Fabiola/Yáñez.
             if permite_fpb and p < piso:
                 requiere_fpb[j] = True
                 piso_fpb_i[j] = piso
@@ -422,6 +437,7 @@ def simular(
                 anios_formal = np.append(anios_formal, np.zeros(n_new))
                 anios_activo = np.append(anios_activo, np.zeros(n_new))
                 suma_sal_formal = np.append(suma_sal_formal, np.zeros(n_new))
+                ultimo_sal_formal = np.append(ultimo_sal_formal, np.zeros(n_new))
                 vivo = np.append(vivo, np.ones(n_new, dtype=bool))
                 retirado = np.append(retirado, np.zeros(n_new, dtype=bool))
                 pension = np.append(pension, np.zeros(n_new))
@@ -518,6 +534,9 @@ def simular(
         anios_formal = anios_formal + formal_imss
         anios_activo = anios_activo + activo
         suma_sal_formal = suma_sal_formal + np.where(formal_imss, w_cot, 0.0)
+        # F2 (§5.1): último salario formal observado — insumo del piso legal
+        # "ultimo_anio" [V, Nota 1 EF 2T-2025: "igual a su ÚLTIMO SALARIO"]
+        ultimo_sal_formal = np.where(formal_imss, w_cot, ultimo_sal_formal)
 
         # -- retiro: nodo de diferimiento (60) + edad legal (65; reformable) --
         salida_retiro = 0.0
