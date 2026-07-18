@@ -1,0 +1,35 @@
+eje,punto,escenario,anio_suficiencia,balance_vp_mdp,actuarius_balance_mdp,actuarius_anio,delta_balance_mdp,nota
+tasa_diferimiento,endogena_umbral,escenario_a,2038,-149422.7,,,,"tasa endógena: umbral 0.0%, vpn 24.4% (tasa_diferimiento.csv)"
+tasa_diferimiento,endogena_umbral,escenario_b,2035,-166838.7,,,,"tasa endógena: umbral 0.0%, vpn 24.4% (tasa_diferimiento.csv)"
+tasa_diferimiento,endogena_vpn,escenario_a,2036,-634628.9,,,,"tasa endógena: umbral 0.0%, vpn 24.4% (tasa_diferimiento.csv)"
+tasa_diferimiento,endogena_vpn,escenario_b,2034,-652044.9,,,,"tasa endógena: umbral 0.0%, vpn 24.4% (tasa_diferimiento.csv)"
+tasa_diferimiento,forzada_0.10,escenario_a,2037,-318951.4,,,,
+tasa_diferimiento,forzada_0.10,escenario_b,2034,-336367.4,-935038.0,2048.0,598670.6,espera 10%
+tasa_diferimiento,forzada_0.20,escenario_a,2036,-487985.3,,,,
+tasa_diferimiento,forzada_0.20,escenario_b,2034,-505401.3,,,,
+tasa_diferimiento,forzada_0.40,escenario_a,2036,-830575.9,,,,
+tasa_diferimiento,forzada_0.40,escenario_b,2034,-847991.9,-2683873.0,2042.0,1835881.1,"cobertura 50 años (comparable); base 100 años: -3,520,904"
+tasa_diferimiento,forzada_0.60,escenario_a,2035,-1173709.7,,,,
+tasa_diferimiento,forzada_0.60,escenario_b,2033,-1191125.7,,,,
+tasa_diferimiento,forzada_0.80,escenario_a,2035,-1510767.1,,,,
+tasa_diferimiento,forzada_0.80,escenario_b,2033,-1528183.1,,,,
+tasa_diferimiento,forzada_1.00,escenario_a,2034,-1841403.6,,,,
+tasa_diferimiento,forzada_1.00,escenario_b,2033,-1858819.6,-6766133.0,2036.0,4907313.4,espera 100%
+r_fpb,0.032,escenario_a,2037,-200651.6,,,,G_t endógeno regla umbral
+r_fpb,0.032,escenario_b,2034,-218067.6,,,,G_t endógeno regla umbral
+r_fpb,0.042,escenario_a,2038,-149422.7,,,,G_t endógeno regla umbral
+r_fpb,0.042,escenario_b,2035,-166838.7,,,,G_t endógeno regla umbral
+r_fpb,0.062,escenario_a,2040,-81656.6,,,,G_t endógeno regla umbral
+r_fpb,0.062,escenario_b,2036,-99072.6,,,,G_t endógeno regla umbral
+definicion_piso,ultimo_anio,escenario_a,2038,-149422.7,,,,regla legal (base Sección 8)
+definicion_piso,promedio_carrera,escenario_a,2041,-113139.2,,,,regla original Secciones 6-7
+definicion_piso,ultimo_anio,escenario_b,2035,-166838.7,,,,regla legal (base Sección 8)
+definicion_piso,promedio_carrera,escenario_b,2037,-130555.2,,,,regla original Secciones 6-7
+ingresos_cero,I_t=0,escenario_a,2032,-215761.8,,,,|ΔB| = 44.40% del balance base
+ingresos_cero,I_t=0,escenario_b,2032,-203218.2,,,,|ΔB| = 21.81% del balance base
+patrimonio_inicial,35689_neto_V,escenario_b,2035,-166838.7,,,,
+patrimonio_inicial,53105_jun25_V,escenario_a,2038,-149422.7,,,,
+patrimonio_inicial,60000_cierre25_I,escenario_a,2039,-142527.7,,,,
+decaimiento_flujos,0.90,escenario_a,2037,-161891.3,,,,
+decaimiento_flujos,0.95,escenario_a,2038,-149422.7,,,,
+decaimiento_flujos,1.00,escenario_a,2040,-117560.9,,,,
