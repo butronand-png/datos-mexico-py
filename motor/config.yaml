@@ -76,6 +76,26 @@ fpb:
   # último salario formal topado — usar en corridas Sección 8).
   definicion_piso: "promedio_carrera"
 
+# Recursión del fideicomiso FPB (motor/fondo_fpb.py, SPEC §6 — Sección 8).
+# Cifras [V] de los estados financieros 2T-2025 (Banxico fiduciario, NIF
+# B-16, fpbienestar.org.mx/d/Estadosfinancieros2T2025.pdf; extracción en
+# specs/REF_estados_financieros_FPB_2T2025.md). Todo en mdp reales 2025.
+fpb_fondo:
+  rendimiento_real: 0.042             # PROVISIONAL [S, Actuarius/Banxico]
+  gastos_operativos_mdp: 54           # [V, F9] 27 mdp en 6m (~ 53.1 Actuarius)
+  factor_decaimiento_flujos: 0.95     # PROVISIONAL [S] — la fuente (cuentas 70+/75+) se agota
+  escenario_a:                        # bruto — reporte principal
+    patrimonio_inicial_mdp: 53105     # [V, F9] patrimonio contable jun-2025
+    ingresos_anuales_mdp: 6200        # [V, F9] flujo observado anualizado (3,113 en 6m)
+    devoluciones_anuales_mdp: 2800    # [V, F9] flujo observado anualizado (1,406 en 6m)
+  escenario_b:                        # neto de reserva — comparable Actuarius
+    patrimonio_inicial_mdp: 35689     # [V, F9] 53,105 - 17,416 (Nota 7)
+    ingresos_anuales_mdp: 3400        # [I] neto de devoluciones (6,200 - 2,800)
+    devoluciones_anuales_mdp: 0       # reserva pre-fondeada — no doble contar
+  stock_inicial:                      # cola exógena §5.2 (~7,000 beneficiarios)
+    gasto_anual_mdp: 193              # PROVISIONAL — ancla 289.61 mdp acum. [V, F3]
+    edad_cohorte: 66
+
 # Decisión de diferimiento 60 vs 65 por agente (SPEC fondo FPB §4, Sección 8).
 # Nodo único al cumplir 60 (solo proyección, requiere semanas cumplidas):
 # si NO difiere → retiro anticipado por cesantía SIN complemento FPB (ley).
