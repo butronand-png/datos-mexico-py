@@ -76,6 +76,15 @@ fpb:
   # último salario formal topado — usar en corridas Sección 8).
   definicion_piso: "promedio_carrera"
 
+# Decisión de diferimiento 60 vs 65 por agente (SPEC fondo FPB §4, Sección 8).
+# Nodo único al cumplir 60 (solo proyección, requiere semanas cumplidas):
+# si NO difiere → retiro anticipado por cesantía SIN complemento FPB (ley).
+diferimiento:
+  activo: false            # default OFF — no-regresión bit a bit (§8.1)
+  regla: "umbral"          # "umbral" (réplica Actuarius) | "vpn" (actuarial)
+  umbral: 2.0              # difiere si b65_esperada >= umbral·b60 [S, Actuarius]
+  tasa_forzada: null       # 0.0-1.0: ignora la regla, difiere~Bernoulli(p) — F4
+
 escenarios:
   base:
     delta_densidad_pp: 0.0
