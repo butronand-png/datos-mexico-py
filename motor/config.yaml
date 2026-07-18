@@ -55,12 +55,26 @@ pension_garantizada:
   pg_mensual_2025: 7750.0    # PROVISIONAL: promedio del tabulador post-2020 (edad x semanas x salario); usar tabulador completo en Fase 2 — confirmar con Fabiola/Yáñez
 
 fpb:
-  # Tope del complemento FPB = salario mensual promedio de cotización IMSS
-  # del año previo (regla en reglas_sar.tope_fpb_mensual; bitácora #22).
-  # NO se indexa a INPC: 16,777.68 (2024) -> 17,364.00 (2026) implica ~1.7%
-  # anual, muy por debajo de la inflación observada 2024-2025 (~4-5%).
+  # Tope del complemento FPB. Auditoría 2026-07-18 (bitácora #26, SPEC
+  # fondo FPB §3.2): el tope se actualiza cada 1-ene por INFLACIÓN
+  # ESTIMADA [V, CONSAR/fpbienestar.org.mx] ⇒ en pesos reales es ≈
+  # constante. El ancla antes etiquetada "2026" (17,364.00 = salario
+  # promedio IMSS 2025) es en realidad el tope 2025; el oficial 2026 es
+  # 17,885.85 (IMSS, +3.0% ≈ inflación estimada).
   tope_mensual_2024: 16777.68  # ancla de LEY — Decreto FPB, DOF 01/05/2024
-  tope_mensual_2026: 17364.00  # oficial vigente — CONSAR (punto de validación)
+  tope_mensual_2025: 17364.00  # oficial CONSAR (antes mal etiquetada 2026)
+  tope_mensual_2026: 17885.85  # oficial IMSS (comunicado FPB, F1 del SPEC)
+  # "legada": interpolación geométrica 2024→"2026" + crecimiento secular
+  #   (regla de bitácora #22, CONTRADICHA por fuente primaria; se conserva
+  #   como default por la no-regresión bit a bit de Secciones 6-7).
+  # "real_constante": anclas nominales deflactadas con INPC a pesos 2025;
+  #   2027+ constante en el nivel real del ancla 2026 (regla corregida,
+  #   usarla en las corridas de la Sección 8).
+  regla_tope: "legada"
+  # Piso del complemento: "promedio_carrera" (regla actual, default por
+  # no-regresión) | "ultimo_anio" (regla legal [V, F2/F8/Nota 1 EF 2T25]:
+  # último salario formal topado — usar en corridas Sección 8).
+  definicion_piso: "promedio_carrera"
 
 escenarios:
   base:

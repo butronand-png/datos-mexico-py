@@ -98,19 +98,22 @@ def vector_tasas_aportacion() -> dict[int, float]:
 # ---------------------------------------------------------------------------
 # Tope del complemento FPB.
 #
-# Mecánica legal: el tope equivale al salario mensual promedio de cotización
-# registrado en el IMSS el año previo ("salario mensual promedio registrado
-# en el año 2023 en el IMSS actualizado", Decreto FPB, DOF 01/05/2024).
-# NO se indexa a INPC: de 16,777.68 (2024) a 17,364.00 (2026, CONSAR) el
-# crecimiento implícito es ~1.7% anual, muy por debajo de la inflación
-# observada 2024-2025 (~4-5%).
+# Mecánica legal [V, bitácora #26]: el tope parte del salario mensual
+# promedio IMSS del año previo y se actualiza CADA 1-ENE POR INFLACIÓN
+# ESTIMADA (fuente primaria fpbienestar.org.mx y CONSAR art. 394538)
+# ⇒ en pesos reales es ≈ constante. La lectura anterior ("NO se indexa
+# a INPC... ~1.7% anual, pierde valor real", bitácora #22) quedó
+# CONTRADICHA por la fuente primaria: el ancla que se tomaba como tope
+# 2026 (17,364.00) es en realidad el tope 2025 (salario promedio IMSS
+# 2025); el tope 2026 oficial es 17,885.85 (+3.0% ≈ inflación estimada).
 #
-# ⚠️ SUPUESTO PROVISIONAL (bitácora #22): tope_t = salario medio IMSS_{t-1}.
-# - Tramo observado 2024-2026: interpolación geométrica entre las dos anclas
-#   oficiales (la serie de salario medio IMSS no está en el SDK — ver
-#   ASKS_JUNTA.md). El valor 2025 implícito queda PENDIENTE DE VALIDACIÓN.
-# - Proyección 2027+: crece con el MISMO crecimiento salarial real secular
-#   de los agentes del motor (coherencia piso/salarios; 0 en el skeleton).
+# Conviven dos reglas (config ``fpb.regla_tope``):
+# - ``tope_fpb_mensual`` (legada, #22): interpolación geométrica
+#   2024→"2026" + crecimiento secular. CONSERVADA como default por la
+#   no-regresión bit a bit de las Secciones 6-7.
+# - ``tope_fpb_mensual_real_constante`` (corregida, #26): anclas
+#   nominales deflactadas con INPC a pesos 2025; 2027+ constante en el
+#   nivel real del ancla 2026.
 # ---------------------------------------------------------------------------
 def tope_fpb_mensual(
     anio: int,
@@ -118,12 +121,18 @@ def tope_fpb_mensual(
     tope_2026: float,
     crecimiento_salarial_real: float = 0.0,
 ) -> float:
-    """Tope mensual del complemento FPB para el año dado.
+    """Tope mensual FPB — REGLA LEGADA (bitácora #22, contradicha por #26).
+
+    Se conserva tras el flag ``fpb.regla_tope: "legada"`` para la
+    no-regresión bit a bit; las corridas de la Sección 8 usan
+    :func:`tope_fpb_mensual_real_constante`.
 
     Args:
         anio: año calendario (el FPB existe desde 2024).
         tope_2024: ancla de ley (DOF 01/05/2024): 16,777.68.
-        tope_2026: valor oficial CONSAR vigente: 17,364.00.
+        tope_2026: ancla que la regla trataba como tope 2026 — la
+            auditoría #26 estableció que 17,364.00 es el tope 2025;
+            se pasa el mismo valor para reproducir bits.
         crecimiento_salarial_real: crecimiento salarial real secular del
             motor (config ``economia.crecimiento_salarial_secular_real``).
     """
@@ -133,6 +142,30 @@ def tope_fpb_mensual(
     if anio <= 2026:
         return tope_2024 * factor_obs ** (anio - 2024)
     return tope_2026 * (1.0 + crecimiento_salarial_real) ** (anio - 2026)
+
+
+def tope_fpb_mensual_real_constante(
+    anio: int,
+    topes_nominales: dict[int, float],
+    deflactor_inpc: dict[int, float],
+) -> float:
+    """Tope mensual FPB en pesos reales 2025 — regla corregida (bitácora #26).
+
+    [V] El tope se actualiza cada 1-ene por inflación estimada ⇒ real ≈
+    constante. Las anclas nominales observadas (2024: 16,777.68; 2025:
+    17,364.00; 2026: 17,885.85) se deflactan a pesos 2025 con el INPC
+    promedio anual (``motor.datos.cargar_deflactor_inpc``); fuera del
+    tramo observado el tope real se mantiene constante en el ancla más
+    cercana (⚠️ SUPUESTO: la actualización por inflación estimada
+    compensa exactamente la inflación realizada).
+
+    Args:
+        anio: año calendario.
+        topes_nominales: anclas nominales por año (config ``fpb``).
+        deflactor_inpc: INPC promedio del año / promedio 2025.
+    """
+    ancla = min(max(anio, min(topes_nominales)), max(topes_nominales))
+    return topes_nominales[ancla] / deflactor_inpc[ancla]
 
 
 # ---------------------------------------------------------------------------

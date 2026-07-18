@@ -22,20 +22,20 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from motor.datos import (
-    cargar_conapo,
-    cargar_indice_salarial_real,
-    cargar_mortalidad,
-    cargar_rendimientos_reales,
-    participaciones_enoe,
-    qx_por_sexo,
-)
-from motor.motor import simular
-
 DESTINO = REPO / "tests" / "motor" / "fixtures"
 
 
 def main() -> int:
+    from motor.datos import (
+        cargar_conapo,
+        cargar_indice_salarial_real,
+        cargar_mortalidad,
+        cargar_rendimientos_reales,
+        participaciones_enoe,
+        qx_por_sexo,
+    )
+    from motor.motor import simular
+
     DESTINO.mkdir(exist_ok=True)
     cfg = yaml.safe_load((REPO / "motor" / "config.yaml").read_text())
     r = simular(

@@ -292,7 +292,23 @@ def simular(
     pg_mensual = cfg["pension_garantizada"]["pg_mensual_2025"]
     g_secular = cfg["economia"]["crecimiento_salarial_secular_real"]
     tope_fpb_2024 = cfg["fpb"]["tope_mensual_2024"]
-    tope_fpb_2026 = cfg["fpb"]["tope_mensual_2026"]
+    # Regla legada (#22): su segundo ancla era el valor hoy re-etiquetado
+    # como tope 2025 (17,364.00) — se le pasa ese mismo valor para
+    # reproducir bits (auditoría #26; fallback a la clave vieja por si la
+    # config del llamador aún no está re-etiquetada).
+    tope_fpb_legado = cfg["fpb"].get(
+        "tope_mensual_2025", cfg["fpb"].get("tope_mensual_2026")
+    )
+    regla_tope = cfg["fpb"].get("regla_tope", "legada")
+    if regla_tope == "real_constante":
+        from motor.datos import cargar_deflactor_inpc
+
+        topes_nominales = {
+            a: cfg["fpb"][f"tope_mensual_{a}"] for a in (2024, 2025, 2026)
+        }
+        deflactor_inpc = cargar_deflactor_inpc()
+    elif regla_tope != "legada":
+        raise ValueError(f"fpb.regla_tope desconocida: {regla_tope!r}")
 
     ledger_rows = []
     anual_rows = []
@@ -418,9 +434,14 @@ def simular(
         # -- retiro a la edad legal (65 vigente; reformable) ------------------
         cumple_edad = vivo & ~retirado & (edad >= edad_ret) & (anio > anio_val)
         salida_retiro = 0.0
-        tope_fpb = reglas_sar.tope_fpb_mensual(
-            anio, tope_fpb_2024, tope_fpb_2026, g_secular
-        )
+        if regla_tope == "real_constante":
+            tope_fpb = reglas_sar.tope_fpb_mensual_real_constante(
+                anio, topes_nominales, deflactor_inpc
+            )
+        else:
+            tope_fpb = reglas_sar.tope_fpb_mensual(
+                anio, tope_fpb_2024, tope_fpb_legado, g_secular
+            )
         if cumple_edad.any():
             ids = np.where(cumple_edad)[0]
             sem_req = politica.semanas_requeridas(anio)
