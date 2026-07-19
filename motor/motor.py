@@ -379,7 +379,8 @@ def simular(
             else:
                 piso = min(sal_prom, tope_fpb_j) if not np.isnan(sal_prom) else 0.0
             # ⚠️ PROVISIONAL: elegibilidad FPB = cumplir semanas y
-            # edad 65 (ley 97) — confirmar reglas exactas con Fabiola/Yáñez.
+            # edad 65 (ley 97) — confirmar reglas exactas con Fabiola /
+            # asesoría actuarial (validación pendiente).
             if permite_fpb and p < piso:
                 requiere_fpb[j] = True
                 piso_fpb_i[j] = piso

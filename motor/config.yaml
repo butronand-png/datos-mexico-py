@@ -24,7 +24,7 @@ macro:
 
 economia:
   rendimiento_real_anual: 0.04     # PROVISIONAL: r real constante 4% — calibrar con serie SIEFOREs (rendimientos 36m nominales 6.5-9.4% 2019-2025, client.consar)
-  tasa_tecnica_anualidad: 0.03     # PROVISIONAL: tasa técnica real para ä_x — cerrar con Dra. Yáñez
+  tasa_tecnica_anualidad: 0.03     # PROVISIONAL: tasa técnica real para ä_x — cerrar con asesoría actuarial (validación pendiente)
   uma_diaria_2025: 113.14          # DOF/INEGI, valor 2025
   crecimiento_salarial_edad: 0.020 # PROVISIONAL: pendiente inicial del perfil edad-salario
   curvatura_perfil_edad: 0.0004    # PROVISIONAL: decaimiento del crecimiento con la edad
@@ -52,7 +52,7 @@ mercado_laboral:
   prop_issste_formales: 0.164
 
 pension_garantizada:
-  pg_mensual_2025: 7750.0    # PROVISIONAL: promedio del tabulador post-2020 (edad x semanas x salario); usar tabulador completo en Fase 2 — confirmar con Fabiola/Yáñez
+  pg_mensual_2025: 7750.0    # PROVISIONAL: promedio del tabulador post-2020 (edad x semanas x salario); usar tabulador completo en Fase 2 — confirmar con Fabiola / asesoría actuarial
 
 fpb:
   # Tope del complemento FPB. Auditoría 2026-07-18 (bitácora #26, SPEC

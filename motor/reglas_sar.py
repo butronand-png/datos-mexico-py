@@ -20,7 +20,7 @@ import numpy as np
 # del nivel salarial en UMAs (el ramp real es por banda); aquí se usa un
 # vector promedio año→tasa total, anclado en 6.5% (pre-2023) y 15% (2030),
 # consistente con ~8.5% total en 2024 (brief §4.5) — verificar el desglose
-# por banda contra DOF con la Dra. Yáñez / CONSAR.
+# por banda contra DOF con asesoría actuarial (validación pendiente) / CONSAR.
 # ---------------------------------------------------------------------------
 _TASA_RCV = {a: 0.065 for a in range(1997, 2023)}
 for _i, _a in enumerate(range(2023, 2031)):
@@ -249,7 +249,8 @@ def factor_anualidad(qx: np.ndarray, edad: int, tasa_tecnica: float) -> float:
 
     ⚠️ SUPUESTO PROVISIONAL: convención anual anticipada, tasa técnica real
     constante — la convención exacta (mensual/anual, anticipada/vencida,
-    tasa técnica) debe cerrarse con la Dra. Yáñez (brief §4.6).
+    tasa técnica) debe cerrarse con asesoría actuarial (validación
+    pendiente; brief §4.6).
     """
     v = 1.0 / (1.0 + tasa_tecnica)
     kpx = 1.0
