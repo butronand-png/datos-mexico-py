@@ -124,6 +124,8 @@ ignore = []
 # retirar E402 de esta lista; reestructurar los 9 scripts a 26 días del
 # deadline es riesgo injustificado.
 "analisis/matrices/**" = ["RUF001", "RUF002", "RUF003", "E402", "N806"]
+# analisis/fondo (Sección 8): mismo patrón estructural que analisis/matrices.
+"analisis/fondo/**" = ["RUF001", "RUF002", "RUF003", "E402", "N806"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

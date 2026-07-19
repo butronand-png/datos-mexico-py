@@ -61,6 +61,24 @@ def cargar_indice_salarial_real() -> dict[int, float]:
     return {a: v / base for a, v in real.items()}
 
 
+def cargar_deflactor_inpc() -> dict[int, float]:
+    """Deflactor anual a pesos de 2025: INPC promedio del año / promedio 2025.
+
+    Insumo de la regla de tope FPB ``real_constante`` (bitácora #26): las
+    anclas nominales del tope (2024/2025/2026) se dividen entre este factor
+    para expresarlas en pesos reales de 2025.
+
+    ⚠️ SUPUESTO PROVISIONAL: promedio simple de los meses disponibles del
+    año (2026 solo tiene ene-may publicados en ``inpc_mensual.csv``); el
+    tope rige todo el año calendario, así que el promedio anual es la
+    convención natural para un flujo mensual.
+    """
+    inpc = pd.read_csv(DATA_DIR / "inpc_mensual.csv")
+    prom = inpc.groupby("anio")["inpc"].mean()
+    base = prom[2025]
+    return {int(a): float(v / base) for a, v in prom.items()}
+
+
 def cargar_rendimientos_reales() -> dict[int, float]:
     """Serie anual de rendimiento BRUTO real del sistema 1997-2025.
 

@@ -264,6 +264,7 @@ def simular(
     anios_formal = np.zeros(n)
     anios_activo = np.zeros(n)  # años desde la entrada (denominador densidad)
     suma_sal_formal = np.zeros(n)
+    ultimo_sal_formal = np.zeros(n)  # F2: piso legal = último salario (§5.1)
     vivo = np.ones(n, dtype=bool)
     retirado = np.zeros(n, dtype=bool)
     pension = np.zeros(n)
@@ -274,6 +275,14 @@ def simular(
     requiere_fpb = np.zeros(n, dtype=bool)
     tasa_reemplazo = np.full(n, np.nan)
     saldo_final = np.full(n, np.nan)
+    # F1 diferimiento (SPEC fondo FPB §4): estado del nodo de decisión 60
+    # vs 65. Los arrays existen siempre (baratos); las columnas de salida
+    # solo se emiten con diferimiento.activo=true (no-regresión §8.1).
+    via_pension = np.full(n, "sin_retiro", dtype=object)
+    b60_hipotetica = np.full(n, np.nan)
+    b65_esperada = np.full(n, np.nan)
+    difirio = np.zeros(n, dtype=bool)
+    murio_difiriendo = np.zeros(n, dtype=bool)
 
     base_log_w = np.log(cfg["salarios"]["mediana_uma_mensual"] * uma_mensual)
 
@@ -292,7 +301,109 @@ def simular(
     pg_mensual = cfg["pension_garantizada"]["pg_mensual_2025"]
     g_secular = cfg["economia"]["crecimiento_salarial_secular_real"]
     tope_fpb_2024 = cfg["fpb"]["tope_mensual_2024"]
-    tope_fpb_2026 = cfg["fpb"]["tope_mensual_2026"]
+    # Regla legada (#22): su segundo ancla era el valor hoy re-etiquetado
+    # como tope 2025 (17,364.00) — se le pasa ese mismo valor para
+    # reproducir bits (auditoría #26; fallback a la clave vieja por si la
+    # config del llamador aún no está re-etiquetada).
+    tope_fpb_legado = cfg["fpb"].get(
+        "tope_mensual_2025", cfg["fpb"].get("tope_mensual_2026")
+    )
+    regla_tope = cfg["fpb"].get("regla_tope", "legada")
+    if regla_tope == "real_constante":
+        from motor.datos import cargar_deflactor_inpc
+
+        topes_nominales = {
+            a: cfg["fpb"][f"tope_mensual_{a}"] for a in (2024, 2025, 2026)
+        }
+        deflactor_inpc = cargar_deflactor_inpc()
+    elif regla_tope != "legada":
+        raise ValueError(f"fpb.regla_tope desconocida: {regla_tope!r}")
+    # F2 (§5.1): definición del piso del complemento. "promedio_carrera" es
+    # la regla original (default, no-regresión §8.1); "ultimo_anio" es la
+    # legal [V, F2/F8 y Nota 1 de los EF 2T-2025: piso = último salario,
+    # topado] — [I] con perfiles crecientes, promedio_carrera SUBESTIMA.
+    definicion_piso = cfg["fpb"].get("definicion_piso", "promedio_carrera")
+    if definicion_piso not in ("promedio_carrera", "ultimo_anio"):
+        raise ValueError(f"fpb.definicion_piso desconocida: {definicion_piso!r}")
+
+    # F1: decisión de diferimiento 60 vs 65 (SPEC fondo FPB §4). Default
+    # OFF — con el flag apagado el flujo (y el stream del rng) es idéntico
+    # bit a bit al de la rama base (§8.1).
+    dif_cfg = cfg.get("diferimiento") or {}
+    dif_activo = bool(dif_cfg.get("activo", False))
+    dif_regla = dif_cfg.get("regla", "umbral")
+    dif_umbral = float(dif_cfg.get("umbral", 2.0))
+    dif_tasa_forzada = dif_cfg.get("tasa_forzada")
+    if dif_activo and dif_regla not in ("umbral", "vpn"):
+        raise ValueError(f"diferimiento.regla desconocida: {dif_regla!r}")
+    # r ex-ante de la proyección del saldo 60→65: el rendimiento esperado
+    # de config, NO el histórico realizado (⚠️ SUPUESTO, SPEC §4.1).
+    r_esperado = r_real
+
+    def _retirar_agente(
+        j: int,
+        edad_retiro_j: int,
+        anio_j: int,
+        tope_fpb_j: float,
+        permite_fpb: bool,
+        via_con_pension: str,
+    ) -> float:
+        """Liquida el retiro del agente j; regresa el saldo que sale del sistema.
+
+        Bloque de retiro factorizado (SPEC §4.1): lo llaman el retiro a la
+        edad legal (permite_fpb=True, via "vejez_65") y el retiro anticipado
+        por cesantía del nodo de diferimiento (permite_fpb=False — [V] la
+        cesantía excluye el complemento FPB por ley, via "cesantia_60").
+        La aritmética es idéntica al bloque original (no-regresión §8.1).
+        """
+        sal_prom = (
+            suma_sal_formal[j] / anios_formal[j]
+            if anios_formal[j] > 0
+            else np.nan
+        )
+        if semanas[j] >= politica.semanas_requeridas(anio_j):
+            p = saldo[j] / (12.0 * a_retiro(sexo[j], edad_retiro_j))
+            if p < pg_mensual:
+                # ⚠️ PROVISIONAL: PG como piso plano (el vigente es
+                # tabulador edad x semanas x salario) pagada por el
+                # Estado al agotarse el saldo — aquí piso directo.
+                p = pg_mensual
+                requiere_pg[j] = True
+            if definicion_piso == "ultimo_anio":
+                # regla legal (§5.1): piso = último salario formal, topado
+                piso = (
+                    min(ultimo_sal_formal[j], tope_fpb_j)
+                    if ultimo_sal_formal[j] > 0
+                    else 0.0
+                )
+            else:
+                piso = min(sal_prom, tope_fpb_j) if not np.isnan(sal_prom) else 0.0
+            # ⚠️ PROVISIONAL: elegibilidad FPB = cumplir semanas y
+            # edad 65 (ley 97) — confirmar reglas exactas con Fabiola /
+            # asesoría actuarial (validación pendiente).
+            if permite_fpb and p < piso:
+                requiere_fpb[j] = True
+                piso_fpb_i[j] = piso
+            pension[j] = p
+            # pensión efectiva percibida = piso FPB si aplica el complemento
+            efectiva = piso if requiere_fpb[j] else p
+            tasa_reemplazo[j] = (
+                efectiva / sal_prom
+                if not np.isnan(sal_prom) and sal_prom > 0
+                else np.nan
+            )
+            via_pension[j] = via_con_pension
+        else:
+            # negativa de pensión: entrega del saldo en una exhibición
+            pension[j] = 0.0
+            tasa_reemplazo[j] = 0.0 if anios_formal[j] > 0 else np.nan
+            via_pension[j] = "negativa"
+        saldo_final[j] = saldo[j]
+        anio_retiro[j] = anio_j
+        edad_al_retiro[j] = int(edad[j])
+        liberado = saldo[j]
+        saldo[j] = 0.0
+        return liberado
 
     ledger_rows = []
     anual_rows = []
@@ -327,6 +438,7 @@ def simular(
                 anios_formal = np.append(anios_formal, np.zeros(n_new))
                 anios_activo = np.append(anios_activo, np.zeros(n_new))
                 suma_sal_formal = np.append(suma_sal_formal, np.zeros(n_new))
+                ultimo_sal_formal = np.append(ultimo_sal_formal, np.zeros(n_new))
                 vivo = np.append(vivo, np.ones(n_new, dtype=bool))
                 retirado = np.append(retirado, np.zeros(n_new, dtype=bool))
                 pension = np.append(pension, np.zeros(n_new))
@@ -337,6 +449,15 @@ def simular(
                 requiere_fpb = np.append(requiere_fpb, np.zeros(n_new, dtype=bool))
                 tasa_reemplazo = np.append(tasa_reemplazo, np.full(n_new, np.nan))
                 saldo_final = np.append(saldo_final, np.full(n_new, np.nan))
+                via_pension = np.append(
+                    via_pension, np.full(n_new, "sin_retiro", dtype=object)
+                )
+                b60_hipotetica = np.append(b60_hipotetica, np.full(n_new, np.nan))
+                b65_esperada = np.append(b65_esperada, np.full(n_new, np.nan))
+                difirio = np.append(difirio, np.zeros(n_new, dtype=bool))
+                murio_difiriendo = np.append(
+                    murio_difiriendo, np.zeros(n_new, dtype=bool)
+                )
                 n += n_new
 
         # -- parámetros de ley del año (con overrides de reforma si aplican) --
@@ -414,54 +535,92 @@ def simular(
         anios_formal = anios_formal + formal_imss
         anios_activo = anios_activo + activo
         suma_sal_formal = suma_sal_formal + np.where(formal_imss, w_cot, 0.0)
+        # F2 (§5.1): último salario formal observado — insumo del piso legal
+        # "ultimo_anio" [V, Nota 1 EF 2T-2025: "igual a su ÚLTIMO SALARIO"]
+        ultimo_sal_formal = np.where(formal_imss, w_cot, ultimo_sal_formal)
 
-        # -- retiro a la edad legal (65 vigente; reformable) ------------------
-        cumple_edad = vivo & ~retirado & (edad >= edad_ret) & (anio > anio_val)
+        # -- retiro: nodo de diferimiento (60) + edad legal (65; reformable) --
         salida_retiro = 0.0
-        tope_fpb = reglas_sar.tope_fpb_mensual(
-            anio, tope_fpb_2024, tope_fpb_2026, g_secular
-        )
-        if cumple_edad.any():
-            ids = np.where(cumple_edad)[0]
-            sem_req = politica.semanas_requeridas(anio)
-            for j in ids:
-                sal_prom = (
-                    suma_sal_formal[j] / anios_formal[j]
-                    if anios_formal[j] > 0
-                    else np.nan
+        if regla_tope == "real_constante":
+            tope_fpb = reglas_sar.tope_fpb_mensual_real_constante(
+                anio, topes_nominales, deflactor_inpc
+            )
+        else:
+            tope_fpb = reglas_sar.tope_fpb_mensual(
+                anio, tope_fpb_2024, tope_fpb_legado, g_secular
+            )
+
+        # Nodo de decisión UNA sola vez al cumplir 60 (SPEC §4.1-4.2): solo
+        # en proyección y con el flag encendido. Quien no cumple semanas a
+        # los 60 NO tiene decisión y sigue hasta 65 (⚠️ SUPUESTO declarado:
+        # quien las cumple a los 61-64 tampoco decide → sesgo
+        # pro-diferimiento; bitácora #27).
+        if dif_activo and anio > anio_val and edad_ret > 60:
+            decide = vivo & ~retirado & (edad == 60.0)
+            for j in np.where(decide)[0]:
+                if semanas[j] < politica.semanas_requeridas(anio):
+                    continue
+                b60 = saldo[j] / (12.0 * a_retiro(sexo[j], 60))
+                anios_espera = edad_ret - 60
+                # F1-bis (bitácora #29): proyección del saldo 60→65 CON
+                # aportaciones esperadas — la cota inferior sin
+                # aportaciones degeneraba ambas reglas (el saldo se
+                # cancela en el ratio b65/b60). Expectativa [S]: la propia
+                # historia del agente — densidad realizada x último
+                # salario formal observado (sin cuota social [S]).
+                dens_j = (
+                    anios_formal[j] / anios_activo[j]
+                    if anios_activo[j] > 0
+                    else 0.0
                 )
-                if semanas[j] >= sem_req:
-                    p = saldo[j] / (12.0 * a_retiro(sexo[j], edad_ret))
-                    if p < pg_mensual:
-                        # ⚠️ PROVISIONAL: PG como piso plano (el vigente es
-                        # tabulador edad x semanas x salario) pagada por el
-                        # Estado al agotarse el saldo — aquí piso directo.
-                        p = pg_mensual
-                        requiere_pg[j] = True
-                    piso = min(sal_prom, tope_fpb) if not np.isnan(sal_prom) else 0.0
-                    # ⚠️ PROVISIONAL: elegibilidad FPB = cumplir semanas y
-                    # edad 65 (ley 97); piso = salario promedio de cotización
-                    # con tope — confirmar reglas exactas con Fabiola/Yáñez.
-                    if p < piso:
-                        requiere_fpb[j] = True
-                        piso_fpb_i[j] = piso
-                    pension[j] = p
-                    # pensión efectiva percibida = piso FPB si aplica el complemento
-                    efectiva = piso if requiere_fpb[j] else p
-                    tasa_reemplazo[j] = (
-                        efectiva / sal_prom
-                        if not np.isnan(sal_prom) and sal_prom > 0
-                        else np.nan
+                saldo_proy = saldo[j]
+                for k in range(anios_espera):
+                    saldo_proy = saldo_proy * (1.0 + r_esperado) + (
+                        dens_j
+                        * politica.tasa_aportacion(anio + k)
+                        * 12.0
+                        * ultimo_sal_formal[j]
                     )
-                else:
-                    # negativa de pensión: entrega del saldo en una exhibición
-                    pension[j] = 0.0
-                    tasa_reemplazo[j] = 0.0 if anios_formal[j] > 0 else np.nan
-                saldo_final[j] = saldo[j]
-                anio_retiro[j] = anio
-                edad_al_retiro[j] = int(edad[j])
-                salida_retiro += saldo[j]
-                saldo[j] = 0.0
+                b65 = saldo_proy / (12.0 * a_retiro(sexo[j], edad_ret))
+                b60_hipotetica[j] = b60
+                b65_esperada[j] = b65
+                if dif_tasa_forzada is not None:
+                    # sensibilidad F4: ignora la regla, sortea Bernoulli(p)
+                    espera = rng.random() < float(dif_tasa_forzada)
+                elif dif_regla == "umbral":
+                    # réplica Actuarius: difiere si b65 >= umbral·b60
+                    espera = b65 >= dif_umbral * b60
+                else:  # "vpn" (validada al parsear config)
+                    # VPN_esperar = b65·ä(65)·v^k·kp60  vs  VPN_ya = b60·ä(60)
+                    tabla = qx["H"] if sexo[j] == 0 else qx["M"]
+                    kp60 = float(np.prod(1.0 - tabla[60:edad_ret]))
+                    v_tec = 1.0 / (1.0 + i_tec)
+                    vpn_esperar = (
+                        b65
+                        * a_retiro(sexo[j], edad_ret)
+                        * v_tec**anios_espera
+                        * kp60
+                    )
+                    vpn_ya = b60 * a_retiro(sexo[j], 60)
+                    espera = vpn_esperar >= vpn_ya
+                difirio[j] = espera
+                if not espera:
+                    # retiro inmediato por cesantía: sin complemento FPB
+                    # [V, F2 — es ley]; alimenta salida_retiro para que la
+                    # conciliación global siga cerrando.
+                    salida_retiro += _retirar_agente(
+                        j, 60, anio, tope_fpb,
+                        permite_fpb=False, via_con_pension="cesantia_60",
+                    )
+                    retirado[j] = True
+
+        cumple_edad = vivo & ~retirado & (edad >= edad_ret) & (anio > anio_val)
+        if cumple_edad.any():
+            for j in np.where(cumple_edad)[0]:
+                salida_retiro += _retirar_agente(
+                    j, edad_ret, anio, tope_fpb,
+                    permite_fpb=True, via_con_pension="vejez_65",
+                )
             retirado[cumple_edad] = True
 
         # -- mortalidad (solo en proyección; el backcast condiciona a estar
@@ -471,6 +630,9 @@ def simular(
             edades_i = np.clip(edad.astype(int), 0, 109)
             q = np.where(sexo == 0, qx["H"][edades_i], qx["M"][edades_i])
             muere = vivo & (rng.random(n) < q)
+            # quien difirió y muere antes de retirarse: el costo de esperar
+            # (SPEC §4.1) — el saldo sale como herencia, línea de abajo
+            murio_difiriendo |= muere & difirio & ~retirado
             # ⚠️ PROVISIONAL: el saldo de activos fallecidos sale del sistema
             # (herencia a beneficiarios); sin pensión de sobrevivencia.
             salida_muerte = saldo[muere & ~retirado].sum()
@@ -574,6 +736,16 @@ def simular(
     )
     if matriz_heterogenea:
         df_ag["escolaridad"] = np.array(ESCOLARIDADES, dtype=object)[esc_idx]
+    if dif_activo:
+        # Salidas del nodo de diferimiento (SPEC §4.4). Emitidas SOLO con
+        # el flag encendido: con el default apagado el df es idéntico al de
+        # la rama base (no-regresión §8.1). via_de_pension usa las
+        # categorías {vejez_65, cesantia_60, negativa, sin_retiro}.
+        df_ag["via_de_pension"] = via_pension
+        df_ag["b60_hipotetica"] = b60_hipotetica
+        df_ag["b65_esperada"] = b65_esperada
+        df_ag["difirio"] = difirio
+        df_ag["murio_difiriendo"] = murio_difiriendo
     return ResultadoSimulacion(
         agentes=df_ag,
         anual=pd.DataFrame(anual_rows),

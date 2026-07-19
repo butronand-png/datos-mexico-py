@@ -24,7 +24,7 @@ macro:
 
 economia:
   rendimiento_real_anual: 0.04     # PROVISIONAL: r real constante 4% — calibrar con serie SIEFOREs (rendimientos 36m nominales 6.5-9.4% 2019-2025, client.consar)
-  tasa_tecnica_anualidad: 0.03     # PROVISIONAL: tasa técnica real para ä_x — cerrar con Dra. Yáñez
+  tasa_tecnica_anualidad: 0.03     # PROVISIONAL: tasa técnica real para ä_x — cerrar con asesoría actuarial (validación pendiente)
   uma_diaria_2025: 113.14          # DOF/INEGI, valor 2025
   crecimiento_salarial_edad: 0.020 # PROVISIONAL: pendiente inicial del perfil edad-salario
   curvatura_perfil_edad: 0.0004    # PROVISIONAL: decaimiento del crecimiento con la edad
@@ -52,15 +52,58 @@ mercado_laboral:
   prop_issste_formales: 0.164
 
 pension_garantizada:
-  pg_mensual_2025: 7750.0    # PROVISIONAL: promedio del tabulador post-2020 (edad x semanas x salario); usar tabulador completo en Fase 2 — confirmar con Fabiola/Yáñez
+  pg_mensual_2025: 7750.0    # PROVISIONAL: promedio del tabulador post-2020 (edad x semanas x salario); usar tabulador completo en Fase 2 — confirmar con Fabiola / asesoría actuarial
 
 fpb:
-  # Tope del complemento FPB = salario mensual promedio de cotización IMSS
-  # del año previo (regla en reglas_sar.tope_fpb_mensual; bitácora #22).
-  # NO se indexa a INPC: 16,777.68 (2024) -> 17,364.00 (2026) implica ~1.7%
-  # anual, muy por debajo de la inflación observada 2024-2025 (~4-5%).
+  # Tope del complemento FPB. Auditoría 2026-07-18 (bitácora #26, SPEC
+  # fondo FPB §3.2): el tope se actualiza cada 1-ene por INFLACIÓN
+  # ESTIMADA [V, CONSAR/fpbienestar.org.mx] ⇒ en pesos reales es ≈
+  # constante. El ancla antes etiquetada "2026" (17,364.00 = salario
+  # promedio IMSS 2025) es en realidad el tope 2025; el oficial 2026 es
+  # 17,885.85 (IMSS, +3.0% ≈ inflación estimada).
   tope_mensual_2024: 16777.68  # ancla de LEY — Decreto FPB, DOF 01/05/2024
-  tope_mensual_2026: 17364.00  # oficial vigente — CONSAR (punto de validación)
+  tope_mensual_2025: 17364.00  # oficial CONSAR (antes mal etiquetada 2026)
+  tope_mensual_2026: 17885.85  # oficial IMSS (comunicado FPB, F1 del SPEC)
+  # "legada": interpolación geométrica 2024→"2026" + crecimiento secular
+  #   (regla de bitácora #22, CONTRADICHA por fuente primaria; se conserva
+  #   como default por la no-regresión bit a bit de Secciones 6-7).
+  # "real_constante": anclas nominales deflactadas con INPC a pesos 2025;
+  #   2027+ constante en el nivel real del ancla 2026 (regla corregida,
+  #   usarla en las corridas de la Sección 8).
+  regla_tope: "legada"
+  # Piso del complemento: "promedio_carrera" (regla actual, default por
+  # no-regresión) | "ultimo_anio" (regla legal [V, F2/F8/Nota 1 EF 2T25]:
+  # último salario formal topado — usar en corridas Sección 8).
+  definicion_piso: "promedio_carrera"
+
+# Recursión del fideicomiso FPB (motor/fondo_fpb.py, SPEC §6 — Sección 8).
+# Cifras [V] de los estados financieros 2T-2025 (Banxico fiduciario, NIF
+# B-16, fpbienestar.org.mx/d/Estadosfinancieros2T2025.pdf; extracción en
+# specs/REF_estados_financieros_FPB_2T2025.md). Todo en mdp reales 2025.
+fpb_fondo:
+  rendimiento_real: 0.042             # PROVISIONAL [S, Actuarius/Banxico]
+  gastos_operativos_mdp: 54           # [V, F9] 27 mdp en 6m (~ 53.1 Actuarius)
+  factor_decaimiento_flujos: 0.95     # PROVISIONAL [S] — la fuente (cuentas 70+/75+) se agota
+  escenario_a:                        # bruto — reporte principal
+    patrimonio_inicial_mdp: 53105     # [V, F9] patrimonio contable jun-2025
+    ingresos_anuales_mdp: 6200        # [V, F9] flujo observado anualizado (3,113 en 6m)
+    devoluciones_anuales_mdp: 2800    # [V, F9] flujo observado anualizado (1,406 en 6m)
+  escenario_b:                        # neto de reserva — comparable Actuarius
+    patrimonio_inicial_mdp: 35689     # [V, F9] 53,105 - 17,416 (Nota 7)
+    ingresos_anuales_mdp: 3400        # [I] neto de devoluciones (6,200 - 2,800)
+    devoluciones_anuales_mdp: 0       # reserva pre-fondeada — no doble contar
+  stock_inicial:                      # cola exógena §5.2 (~7,000 beneficiarios)
+    gasto_anual_mdp: 193              # PROVISIONAL — ancla 289.61 mdp acum. [V, F3]
+    edad_cohorte: 66
+
+# Decisión de diferimiento 60 vs 65 por agente (SPEC fondo FPB §4, Sección 8).
+# Nodo único al cumplir 60 (solo proyección, requiere semanas cumplidas):
+# si NO difiere → retiro anticipado por cesantía SIN complemento FPB (ley).
+diferimiento:
+  activo: false            # default OFF — no-regresión bit a bit (§8.1)
+  regla: "umbral"          # "umbral" (réplica Actuarius) | "vpn" (actuarial)
+  umbral: 2.0              # difiere si b65_esperada >= umbral·b60 [S, Actuarius]
+  tasa_forzada: null       # 0.0-1.0: ignora la regla, difiere~Bernoulli(p) — F4
 
 escenarios:
   base:
