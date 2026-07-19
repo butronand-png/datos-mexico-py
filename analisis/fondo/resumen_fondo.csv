@@ -1,5 +1,5 @@
 regla,escenario,patrimonio_inicial_mdp,anio_suficiencia,balance_vp_mdp,gasto_fpb_2026_mdp,gasto_fpb_2070_mdp
 umbral,escenario_a,53105,2038,-149422.7,1819.9,20508.6
 umbral,escenario_b,35689,2035,-166838.7,1819.9,20508.6
-vpn,escenario_a,53105,2036,-634628.9,1819.9,123377.8
-vpn,escenario_b,35689,2034,-652044.9,1819.9,123377.8
+vpn,escenario_a,53105,2034,-1858795.9,1819.9,345274.2
+vpn,escenario_b,35689,2033,-1876211.9,1819.9,345274.2

@@ -7,5 +7,5 @@ motor,"heterogéneo 5 estados, matrices anuales ENOE 2015-2024 (matriz_heterogen
 flags_seccion8,diferimiento.activo=true; fpb.regla_tope=real_constante; fpb.definicion_piso=ultimo_anio
 fpb_fondo,rendimiento_real=0.042; gastos_operativos_mdp=54; factor_decaimiento_flujos=0.95
 ic95_metodo,"t de Student 4 gl (2.7764) x sd/sqrt(5), entre semillas"
-commit_codigo,434d991
+commit_codigo,98d5da0
 runtime_total_s,16.7

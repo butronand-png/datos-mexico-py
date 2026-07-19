@@ -153,13 +153,24 @@ def main() -> int:
             fila["nota"] = (fila["nota"] + " | " if fila["nota"] else "") + ref["nota"]
         filas.append(fila)
 
+    # tasas endógenas observadas (corrida citable) para las notas
+    tasa = pd.read_csv(OUT / "tasa_diferimiento.csv")
+    tasa_total = {
+        regla: tasa[(tasa["regla"] == regla)
+                    & (tasa["dimension"] == "total")].iloc[0]
+        for regla in g_por_regla
+    }
+
     # ------------------------------------------------ eje 1: tasa de espera
     print("[2/4] Eje 1 (tasa de diferimiento): 6 puntos x 5 semillas…")
     for regla, g in g_por_regla.items():
+        t = tasa_total[regla]
         for esc in ("escenario_a", "escenario_b"):
             t_star, b = evalua(g, esc)
             registra("tasa_diferimiento", f"endogena_{regla}", esc, t_star, b,
-                     nota="tasa endógena: umbral 0.0%, vpn 24.4% (tasa_diferimiento.csv)")
+                     nota=f"tasa endógena {regla}: "
+                          f"{t['tasa_diferimiento_pct']:.1f}% ± "
+                          f"{t['ic95_semiancho']:.1f}")
     for tf in TASAS_FORZADAS:
         t0 = time.time()
         g = corre_g({"tasa_forzada": tf})
@@ -239,18 +250,15 @@ def main() -> int:
         "| Métrica | Datos México | Actuarius | Delta / nota |",
         "|---|---|---|---|",
     ]
-    tasa = pd.read_csv(OUT / "tasa_diferimiento.csv")
-    t_umbral = tasa[(tasa["regla"] == "umbral")
-                    & (tasa["dimension"] == "total")].iloc[0]
-    t_vpn = tasa[(tasa["regla"] == "vpn") & (tasa["dimension"] == "total")].iloc[0]
+    t_umbral, t_vpn = tasa_total["umbral"], tasa_total["vpn"]
     lineas.append(
         f"| Tasa de diferimiento endógena | umbral: "
         f"{t_umbral['tasa_diferimiento_pct']:.1f}% ± "
         f"{t_umbral['ic95_semiancho']:.1f}; vpn: "
         f"{t_vpn['tasa_diferimiento_pct']:.1f}% ± {t_vpn['ic95_semiancho']:.1f} "
-        f"| 40% (supuesto, b65 ≥ 2·b60) | la regla umbral con saldo sin "
-        f"aportaciones 60→65 NUNCA duplica b60 (cota inferior [S]); bajo vpn "
-        f"difieren las mujeres (ventaja de supervivencia) |")
+        f"| 40% (supuesto, b65 ≥ 2·b60) | b65 proyectada CON aportaciones "
+        f"esperadas (densidad personal x último salario, bitácora #29); "
+        f"desagregación por sexo/escolaridad/decil en tasa_diferimiento.csv |")
     resumen = pd.read_csv(OUT / "resumen_fondo.csv")
     for _, r in resumen[resumen["regla"] == "umbral"].iterrows():
         esc = "A (bruto)" if r["escenario"] == "escenario_a" else "B (neto)"

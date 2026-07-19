@@ -1,12 +1,12 @@
 # Comparativa Datos México vs Actuarius — fondo FPB
 
-Corrida: motor heterogéneo, 100,000 agentes x 5 semillas, diferimiento endógeno, piso último salario, tope real constante. Commit `a92b8aa`. Unidades: mdp reales 2025.
+Corrida: motor heterogéneo, 100,000 agentes x 5 semillas, diferimiento endógeno, piso último salario, tope real constante. Commit `98d5da0`. Unidades: mdp reales 2025.
 
 **Advertencia de horizonte**: nuestro balance trunca en 2070 (45 años); el comparable de Actuarius es su cobertura a 50 años, NO su base a 100. El escenario B (patrimonio neto de reserva, R₀ = 35,689) replica su especificación; el A (bruto, R₀ = 53,105, devoluciones explícitas) es nuestro reporte principal.
 
 | Métrica | Datos México | Actuarius | Delta / nota |
 |---|---|---|---|
-| Tasa de diferimiento endógena | umbral: 0.0% ± 0.0; vpn: 24.4% ± 0.4 | 40% (supuesto, b65 ≥ 2·b60) | la regla umbral con saldo sin aportaciones 60→65 NUNCA duplica b60 (cota inferior [S]); bajo vpn difieren las mujeres (ventaja de supervivencia) |
+| Tasa de diferimiento endógena | umbral: 0.0% ± 0.0; vpn: 100.0% ± 0.0 | 40% (supuesto, b65 ≥ 2·b60) | b65 proyectada CON aportaciones esperadas (densidad personal x último salario, bitácora #29); desagregación por sexo/escolaridad/decil en tasa_diferimiento.csv |
 | T* y balance VP, escenario A (bruto) | 2038 / -149,423 | — | endógeno umbral |
 | T* y balance VP, escenario B (neto) | 2035 / -166,839 | 2042 / -2,683,873 (50 años) | endógeno umbral |
 | Espera forzada_0.10 (esc. B) | 2034 / -336,367 | 2048.0 / -935,038 | Δ balance 598,671 |
@@ -25,4 +25,4 @@ Corrida: motor heterogéneo, 100,000 agentes x 5 semillas, diferimiento endógen
 | ingresos_cero | -215,762 | -215,762 | 0 |
 | patrimonio_inicial | -149,423 | -142,528 | 6,895 |
 | r_fpb | -200,652 | -81,657 | 118,995 |
-| tasa_diferimiento | -1,841,404 | -149,423 | 1,691,981 |
+| tasa_diferimiento | -1,858,796 | -149,423 | 1,709,373 |

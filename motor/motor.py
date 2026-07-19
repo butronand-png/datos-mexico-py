@@ -561,8 +561,25 @@ def simular(
                     continue
                 b60 = saldo[j] / (12.0 * a_retiro(sexo[j], 60))
                 anios_espera = edad_ret - 60
-                # cota inferior [S]: proyección del saldo SIN aportaciones
-                saldo_proy = saldo[j] * (1.0 + r_esperado) ** anios_espera
+                # F1-bis (bitácora #29): proyección del saldo 60→65 CON
+                # aportaciones esperadas — la cota inferior sin
+                # aportaciones degeneraba ambas reglas (el saldo se
+                # cancela en el ratio b65/b60). Expectativa [S]: la propia
+                # historia del agente — densidad realizada x último
+                # salario formal observado (sin cuota social [S]).
+                dens_j = (
+                    anios_formal[j] / anios_activo[j]
+                    if anios_activo[j] > 0
+                    else 0.0
+                )
+                saldo_proy = saldo[j]
+                for k in range(anios_espera):
+                    saldo_proy = saldo_proy * (1.0 + r_esperado) + (
+                        dens_j
+                        * politica.tasa_aportacion(anio + k)
+                        * 12.0
+                        * ultimo_sal_formal[j]
+                    )
                 b65 = saldo_proy / (12.0 * a_retiro(sexo[j], edad_ret))
                 b60_hipotetica[j] = b60
                 b65_esperada[j] = b65

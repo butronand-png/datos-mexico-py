@@ -1,8 +1,8 @@
 eje,punto,escenario,anio_suficiencia,balance_vp_mdp,actuarius_balance_mdp,actuarius_anio,delta_balance_mdp,nota
-tasa_diferimiento,endogena_umbral,escenario_a,2038,-149422.7,,,,"tasa endógena: umbral 0.0%, vpn 24.4% (tasa_diferimiento.csv)"
-tasa_diferimiento,endogena_umbral,escenario_b,2035,-166838.7,,,,"tasa endógena: umbral 0.0%, vpn 24.4% (tasa_diferimiento.csv)"
-tasa_diferimiento,endogena_vpn,escenario_a,2036,-634628.9,,,,"tasa endógena: umbral 0.0%, vpn 24.4% (tasa_diferimiento.csv)"
-tasa_diferimiento,endogena_vpn,escenario_b,2034,-652044.9,,,,"tasa endógena: umbral 0.0%, vpn 24.4% (tasa_diferimiento.csv)"
+tasa_diferimiento,endogena_umbral,escenario_a,2038,-149422.7,,,,tasa endógena umbral: 0.0% ± 0.0
+tasa_diferimiento,endogena_umbral,escenario_b,2035,-166838.7,,,,tasa endógena umbral: 0.0% ± 0.0
+tasa_diferimiento,endogena_vpn,escenario_a,2034,-1858795.9,,,,tasa endógena vpn: 100.0% ± 0.0
+tasa_diferimiento,endogena_vpn,escenario_b,2033,-1876211.9,,,,tasa endógena vpn: 100.0% ± 0.0
 tasa_diferimiento,forzada_0.10,escenario_a,2037,-318951.4,,,,
 tasa_diferimiento,forzada_0.10,escenario_b,2034,-336367.4,-935038.0,2048.0,598670.6,espera 10%
 tasa_diferimiento,forzada_0.20,escenario_a,2036,-487985.3,,,,

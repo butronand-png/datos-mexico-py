@@ -97,6 +97,26 @@ def test_regla_vpn(cfg_sintetico, conapo_sintetico, qx_cero, cfg):
     assert (dec["difirio"] == esperado).all()
 
 
+def test_b65_incluye_aportaciones(cfg_sintetico, conapo_sintetico, qx_cero, cfg):
+    """F1-bis (bitácora #29): b65_esperada proyecta CON aportaciones.
+
+    Cota: la versión saldo-solo es b60·(1+r)⁵·ä60/ä65; con densidad y
+    último salario positivos (toda la cohorte sintética cotiza), la
+    proyección con aportaciones debe quedar ESTRICTAMENTE encima.
+    """
+    d, _ = _corre(cfg_sintetico, conapo_sintetico, qx_cero, regla="umbral")
+    dec = d[d["b60_hipotetica"].notna()]
+    assert len(dec) > 0
+    i_tec = cfg["economia"]["tasa_tecnica_anualidad"]
+    r_esp = cfg["economia"]["rendimiento_real_anual"]
+    a60 = factor_anualidad(qx_cero["H"], 60, i_tec)
+    a65 = factor_anualidad(qx_cero["H"], 65, i_tec)
+    b65_saldo_solo = dec["b60_hipotetica"] * (1.0 + r_esp) ** 5 * (a60 / a65)
+    assert (dec["b65_esperada"] > b65_saldo_solo).all(), (
+        "b65_esperada no incorpora aportaciones esperadas"
+    )
+
+
 def test_cesantia_sin_fpb(cfg_sintetico, conapo_sintetico, qx_cero):
     """Retiro a 60 ⇒ requiere_FPB=False y edad_retiro=60 (es ley, F2)."""
     d, _ = _corre(cfg_sintetico, conapo_sintetico, qx_cero, tasa_forzada=0.0)
@@ -126,9 +146,11 @@ def test_tasa_forzada_extremos(cfg_sintetico, conapo_sintetico, qx_cero):
 def test_contabilidad_con_diferimiento(cfg, datos):
     """§8.6: la conciliación agregada del ledger cierra con el flag activo
     y la población real (el retiro a 60 alimenta salida_retiro)."""
+    # tasa_forzada=0.5 garantiza que AMBOS canales se ejercitan (cesantía a
+    # 60 y diferimiento a 65) sin depender de qué dicte la regla endógena
     c = copy.deepcopy(cfg)
     c["diferimiento"] = {
-        "activo": True, "regla": "vpn", "umbral": 2.0, "tasa_forzada": None
+        "activo": True, "regla": "vpn", "umbral": 2.0, "tasa_forzada": 0.5
     }
     r = simular(
         c, datos["conapo"], datos["qx"], datos["part"],
@@ -147,5 +169,6 @@ def test_contabilidad_con_diferimiento(cfg, datos):
     ).to_numpy()
     np.testing.assert_allclose(np.diff(saldo, prepend=0.0), flujo,
                                rtol=1e-9, atol=1e-6)
-    # con la regla vpn y población real hay cesantías: el canal se ejercita
+    # ambos canales ejercitados: cesantías a 60 y diferimientos a 65
     assert (r.agentes["via_de_pension"] == "cesantia_60").sum() > 0
+    assert r.agentes["difirio"].sum() > 0
